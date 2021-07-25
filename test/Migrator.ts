@@ -1,6 +1,6 @@
 import hre, { ethers } from "hardhat";
 import { expect, use } from "chai";
-import { IERC20, MigraterTest, IUniswapV2Pair, KashiPairMediumRiskV1 } from "../typechain";
+import { IERC20, MigratorTest, IUniswapV2Pair, KashiPairMediumRiskV1 } from "../typechain";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 use(require("chai-bignumber")());
@@ -34,20 +34,20 @@ describe("Migrator", async function () {
     let weth: IERC20;
     let token0: IERC20;
     let token1: IERC20;
-    let migrater: MigraterTest;
+    let migrator: MigratorTest;
     let pair: IUniswapV2Pair;
     let kashi0: KashiPairMediumRiskV1;
     let kashi1: KashiPairMediumRiskV1;
-    let Migrater;
+    let Migrator;
     before(async function () {
         [wallet, other] = await ethers.getSigners();
-        Migrater = await ethers.getContractFactory("MigraterTest");
+        Migrator = await ethers.getContractFactory("MigraterTest");
     });
     beforeEach(async function () {
-        migrater = (await Migrater.deploy(
+        migrator = (await Migrator.deploy(
             UNI_V2_FACTORY,
             "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", // WETH
-        )) as MigraterTest;
+        )) as MigratorTest;
         weth = await getVerifiedContractAt("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
         pair = await getVerifiedContractAt(UNI_V2_USDC_USDT);
         kashi0 = await getVerifiedContractAt(KASHI_PAIR0_ADDR);
