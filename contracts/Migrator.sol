@@ -6,17 +6,7 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import { KashiPairMediumRiskV1 as Kashi, IERC20 } from "./bentobox/KashiPairMediumRiskV1.sol";
 
-interface IMigrator {
-    function migrateLpToKashi(
-        address tokenA,
-        address tokenB,
-        Kashi kashiA,
-        Kashi kashiB,
-        bytes[2] calldata datas
-    ) external;
-}
-
-contract Migrator is IMigrator {
+contract Migrator {
     // Functions that need accrue to be called
     uint8 private constant ACTION_ADD_ASSET = 1;
     uint8 private constant ACTION_REPAY = 2;
@@ -52,7 +42,7 @@ contract Migrator is IMigrator {
         Kashi kashi0,
         Kashi kashi1,
         bytes[2] calldata datas
-    ) public override {
+    ) public {
         address pair = IUniswapV2Factory(factory).getPair(tokenA, tokenB);
         require(pair != address(0));
 
