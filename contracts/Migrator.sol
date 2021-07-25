@@ -114,6 +114,7 @@ contract Migrator is IMigrator {
         datas[0] = permitData;
         datas[1] = abi.encodePacked(asset, msg.sender, msg.sender, amount, uint256(0));
         datas[2] = abi.encodePacked(share, msg.sender, false);
+        
         kashi.cook{ value: amount }(actions, values, datas);
     }
 
