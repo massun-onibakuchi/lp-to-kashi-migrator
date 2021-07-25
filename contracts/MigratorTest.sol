@@ -3,9 +3,9 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
-import "./Migrater.sol";
+import "./Migrator.sol";
 
-contract MigraterTest is Migrater {
+contract MigratorTest is Migrator {
     constructor(address _factory, address _WETH) public Migrater(_factory, _WETH) {}
 
     function sort(address tokenA, address tokenB) public pure returns (address token0, address token1) {
