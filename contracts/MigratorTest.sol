@@ -10,8 +10,10 @@ contract MigratorTest is Migrator {
 
     /// @notice assuming caller approve this contract
     /// @dev Explain to a developer any extra details
-    function redeemLpToken(IUniswapV2Pair pool) public {
-        return _redeemLpToken(pool);
+    function redeemLpToken(IUniswapV2Pair pair) public {
+        uint256 amount = pair.balanceOf(msg.sender);
+        pair.transferFrom(msg.sender, address(this), amount);
+        _redeemLpToken(pair, amount);
     }
 
     function cook(
