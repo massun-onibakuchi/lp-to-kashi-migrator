@@ -8,10 +8,6 @@ import "./Migrator.sol";
 contract MigratorTest is Migrator {
     constructor(address _factory, address _WETH) public Migrator(_factory, _WETH) {}
 
-    function sort(address tokenA, address tokenB) public pure returns (address token0, address token1) {
-        return _sort(tokenA, tokenB);
-    }
-
     /// @notice assuming caller approve this contract
     /// @dev Explain to a developer any extra details
     function redeemLpToken(IUniswapV2Pair pool) public {
@@ -19,10 +15,12 @@ contract MigratorTest is Migrator {
     }
 
     function cook(
-        Kashi kashi,
-        address asset,
+        Kashi kashi0,
+        Kashi kashi1,
+        address asset0,
+        address asset1,
         bytes calldata permitData
     ) public {
-        return _cook(kashi, asset, permitData);
+        return _cook(kashi0, kashi1, asset0, asset1, permitData);
     }
 }
