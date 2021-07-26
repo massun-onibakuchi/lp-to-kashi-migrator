@@ -2,11 +2,15 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts/math/SafeMath.sol";
+
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import { KashiPairMediumRiskV1 as Kashi, IERC20 } from "./bentobox/KashiPairMediumRiskV1.sol";
 
 contract Migrator {
+    using SafeMath for uint256;
+
     // Functions that need accrue to be called
     uint8 private constant ACTION_ADD_ASSET = 1;
     uint8 private constant ACTION_REPAY = 2;
@@ -41,7 +45,7 @@ contract Migrator {
         address tokenB,
         Kashi kashi0,
         Kashi kashi1,
-        bytes[2] calldata datas
+        bytes calldata permitData
     ) public {
         address pair = IUniswapV2Factory(factory).getPair(tokenA, tokenB);
         require(pair != address(0));
@@ -57,8 +61,7 @@ contract Migrator {
         (address token0, address token1) = asset0 == tokenA ? (tokenA, tokenB) : (tokenB, tokenA);
 
         _redeemLpToken(IUniswapV2Pair(pair));
-        _cook(kashi0, token0, datas[0]);
-        _cook(kashi1, token1, datas[1]);
+        _cook(kashi0, kashi1, token0, token1, permitData);
     }
 
     function _validateInput(
@@ -71,10 +74,6 @@ contract Migrator {
         require(tokenA != tokenB, "IDENTICAL_ADDRESSES");
     }
 
-    function _sort(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
-        (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-    }
-
     /// @notice assuming caller approve this contract
     /// @dev Explain to a developer any extra details
     function _redeemLpToken(IUniswapV2Pair pair) internal {
@@ -82,33 +81,71 @@ contract Migrator {
         pair.burn(address(this));
     }
 
+    // function _cook(
+    //     Kashi kashi,
+    //     address asset,
+    //     bytes memory permitData
+    // ) internal {
+    //     // cook: params
+    //     // * uint8[] calldata actions,
+    //     // * uint256[] calldata values,
+    //     // * bytes[] calldata datas
+    //     uint256[] memory values;
+    //     uint8[] memory actions;
+    //     bytes[] memory datas;
+    //     actions[0] = ACTION_BENTO_SETAPPROVAL;
+    //     actions[1] = ACTION_BENTO_DEPOSIT;
+    //     actions[2] = ACTION_ADD_ASSET;
+
+    //     (uint256 value, uint256 amount, uint256 share) = _getDepositData(kashi, asset);
+
+    //     values[2] = value;
+    //     datas[0] = permitData;
+    //     datas[1] = abi.encodePacked(asset, msg.sender, msg.sender, amount, uint256(0));
+    //     datas[2] = abi.encodePacked(share, msg.sender, false);
+
+    //     kashi.cook{ value: amount }(actions, values, datas);
+    // }
+
     function _cook(
-        Kashi kashi,
-        address asset,
+        Kashi kashi0,
+        Kashi kashi1,
+        address asset0,
+        address asset1,
         bytes memory permitData
     ) internal {
         // cook: params
         // * uint8[] calldata actions,
         // * uint256[] calldata values,
         // * bytes[] calldata datas
+        (, , bool approved, , , ) = abi.decode(permitData, (address, address, bool, uint8, bytes32, bytes32));
+        require(approved, "approved-shoule-be-true");
+
         uint256[] memory values;
         uint8[] memory actions;
         bytes[] memory datas;
         actions[0] = ACTION_BENTO_SETAPPROVAL;
         actions[1] = ACTION_BENTO_DEPOSIT;
         actions[2] = ACTION_ADD_ASSET;
+        actions[3] = ACTION_BENTO_DEPOSIT;
+        actions[4] = ACTION_ADD_ASSET;
 
-        (uint256 value, uint256 amount, uint256 share) = _makeData(kashi, asset);
-        
-        values[2] = value;
+        (uint256 value0, uint256 amount0, uint256 share0) = _getDepositData(kashi0, asset0);
+        (uint256 value1, uint256 amount1, uint256 share1) = _getDepositData(kashi1, asset1);
+
+        values[1] = value0;
+        values[3] = value1;
+
         datas[0] = permitData;
-        datas[1] = abi.encodePacked(asset, msg.sender, msg.sender, amount, uint256(0));
-        datas[2] = abi.encodePacked(share, msg.sender, false);
-        
-        kashi.cook{ value: amount }(actions, values, datas);
+        datas[1] = abi.encodePacked(asset0, msg.sender, msg.sender, amount0, uint256(0));
+        datas[2] = abi.encodePacked(share0, msg.sender, true);
+        datas[3] = abi.encodePacked(asset1, msg.sender, msg.sender, amount1, uint256(0));
+        datas[4] = abi.encodePacked(share1, msg.sender, true);
+
+        kashi0.cook{ value: value0.add(value1) }(actions, values, datas);
     }
 
-    function _makeData(Kashi kashi, address asset)
+    function _getDepositData(Kashi kashi, address asset)
         internal
         view
         returns (
