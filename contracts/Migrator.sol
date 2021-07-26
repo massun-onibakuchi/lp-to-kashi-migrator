@@ -49,18 +49,23 @@ contract Migrator {
     ) public {
         address pair = IUniswapV2Factory(factory).getPair(tokenA, tokenB);
         require(pair != address(0));
+        IUniswapV2Pair pool = IUniswapV2Pair(pair);
 
         if (tokenA == WETH) {
             tokenA = address(0);
         } else if (tokenB == WETH) {
             tokenB = address(0);
         }
+        // below here WETH == address(0)
         address asset0 = address(kashi0.asset());
         address asset1 = address(kashi1.asset());
         _validateInput(tokenA, tokenB, asset0, asset1);
+
         (address token0, address token1) = asset0 == tokenA ? (tokenA, tokenB) : (tokenB, tokenA);
 
-        _redeemLpToken(IUniswapV2Pair(pair));
+        uint256 amount = pool.balanceOf(msg.sender);
+        pool.transferFrom(msg.sender, address(this), amount);
+        _redeemLpToken(pool, amount);
         _cook(kashi0, kashi1, token0, token1, permitData);
     }
 
@@ -76,36 +81,11 @@ contract Migrator {
 
     /// @notice assuming caller approve this contract
     /// @dev Explain to a developer any extra details
-    function _redeemLpToken(IUniswapV2Pair pair) internal {
-        pair.transferFrom(msg.sender, address(this), pair.balanceOf(msg.sender));
+    /// assuming Lp token is transfered to this contract
+    function _redeemLpToken(IUniswapV2Pair pair, uint256 amount) internal {
+        pair.transfer(address(pair), amount);
         pair.burn(address(this));
     }
-
-    // function _cook(
-    //     Kashi kashi,
-    //     address asset,
-    //     bytes memory permitData
-    // ) internal {
-    //     // cook: params
-    //     // * uint8[] calldata actions,
-    //     // * uint256[] calldata values,
-    //     // * bytes[] calldata datas
-    //     uint256[] memory values;
-    //     uint8[] memory actions;
-    //     bytes[] memory datas;
-    //     actions[0] = ACTION_BENTO_SETAPPROVAL;
-    //     actions[1] = ACTION_BENTO_DEPOSIT;
-    //     actions[2] = ACTION_ADD_ASSET;
-
-    //     (uint256 value, uint256 amount, uint256 share) = _getDepositData(kashi, asset);
-
-    //     values[2] = value;
-    //     datas[0] = permitData;
-    //     datas[1] = abi.encodePacked(asset, msg.sender, msg.sender, amount, uint256(0));
-    //     datas[2] = abi.encodePacked(share, msg.sender, false);
-
-    //     kashi.cook{ value: amount }(actions, values, datas);
-    // }
 
     function _cook(
         Kashi kashi0,
