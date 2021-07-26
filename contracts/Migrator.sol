@@ -101,9 +101,10 @@ contract Migrator {
         (, , bool approved, , , ) = abi.decode(permitData, (address, address, bool, uint8, bytes32, bytes32));
         require(approved, "approved-shoule-be-true");
 
-        uint256[] memory values;
-        uint8[] memory actions;
-        bytes[] memory datas;
+        uint256[] memory values = new uint256[](5);
+        uint8[] memory actions = new uint8[](5);
+        bytes[] memory datas = new bytes[](5); 
+
         actions[0] = ACTION_BENTO_SETAPPROVAL;
         actions[1] = ACTION_BENTO_DEPOSIT;
         actions[2] = ACTION_ADD_ASSET;

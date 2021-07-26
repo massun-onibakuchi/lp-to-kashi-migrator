@@ -1,6 +1,6 @@
 import hre, { waffle, ethers } from "hardhat";
 import { expect, use } from "chai";
-import { keccak256, solidityPack, toUtf8Bytes } from "ethers/lib/utils";
+import { defaultAbiCoder, keccak256, toUtf8Bytes } from "ethers/lib/utils";
 import { signMasterContractApproval } from "./signature";
 import { Wallet } from "ethers";
 import { IERC20, MigratorTest, IUniswapV2Pair, KashiPairMediumRiskV1 } from "../typechain";
@@ -18,7 +18,7 @@ const getVerifiedContractAt = async (address: string) => {
 };
 
 describe("Migrator", async function () {
-    const BENTO_BOX_ADDR = "";
+    const BENTO_BOX_ADDR = "0xF5BCE5077908a1b7370B9ae04AdC565EBd643966";
     // Kashi Medium Risk Wrapped Ether/USD Coin-Chainlink
     const KASHI_PAIR0_ADDR = "0xda2333ae1a3e817bc8fbb1dfd6716e449b606250";
     // Kashi Medium Risk Wrapped Ether/Tether USD-Chainlik
@@ -41,6 +41,7 @@ describe("Migrator", async function () {
     let pair: IUniswapV2Pair;
     let kashi0: KashiPairMediumRiskV1;
     let kashi1: KashiPairMediumRiskV1;
+    let bentoBox;
     let Migrator;
     let chainId;
     before(async function () {
@@ -58,6 +59,7 @@ describe("Migrator", async function () {
         pair = await getVerifiedContractAt(UNI_V2_USDC_USDT);
         kashi0 = await getVerifiedContractAt(KASHI_PAIR0_ADDR);
         kashi1 = await getVerifiedContractAt(KASHI_PAIR1_ADDR);
+        bentoBox = await getVerifiedContractAt(BENTO_BOX_ADDR);
 
         await wallet.sendTransaction({ to: SIGNER_ADDR, value: toWei("1") }); // get some eth from a wallet
         await ethers.provider.send("hardhat_impersonateAccount", [SIGNER_ADDR]);
@@ -86,25 +88,50 @@ describe("Migrator", async function () {
         expect(await pair.balanceOf(wallet.address)).to.equal(0);
     });
 
-    it("cook", async function () {
+    it("setMasterContractApproval", async function () {
         const getPermitData = (user: string, masterContract: string, approved: boolean, v, r, s) => {
-            return solidityPack(
+            return defaultAbiCoder.encode(
                 ["address", "address", "bool", "uint8", "bytes32", "bytes32"],
                 [user, masterContract, approved, v, r, s],
             );
         };
-        const bentoBoxAddr = await kashi0.bentoBox();
+        const nonce = 0;
+        expect(await bentoBox.nonces(wallet.address)).to.eq(nonce);
         const { v, r, s } = await signMasterContractApproval(
             keccak256(toUtf8Bytes("BentoBox V1")),
             // "BentoBox V1",
             chainId || 1,
-            bentoBoxAddr,
+            bentoBox.address,
             wallet.address,
             true,
             wallet,
-            0,
+            nonce,
         );
-        const permitData = getPermitData(wallet.address, bentoBoxAddr, true, v, r, s);
+        const permitData = getPermitData(wallet.address, bentoBox.address, true, v, r, s);
+        await pair.connect(wallet).approve(migrator.address, await pair.balanceOf(wallet.address));
+        await migrator.cook(kashi0.address, kashi1.address, await kashi0.asset(), await kashi1.asset(), permitData);
+    });
+
+    it("cook", async function () {
+        const getPermitData = (user: string, masterContract: string, approved: boolean, v, r, s) => {
+            return defaultAbiCoder.encode(
+                ["address", "address", "bool", "uint8", "bytes32", "bytes32"],
+                [user, masterContract, approved, v, r, s],
+            );
+        };
+        const nonce = 0;
+        expect(await bentoBox.nonces(wallet.address)).to.eq(nonce);
+        const { v, r, s } = await signMasterContractApproval(
+            keccak256(toUtf8Bytes("BentoBox V1")),
+            // "BentoBox V1",
+            chainId || 1,
+            bentoBox.address,
+            wallet.address,
+            true,
+            wallet,
+            nonce,
+        );
+        const permitData = getPermitData(wallet.address, bentoBox.address, true, v, r, s);
         await pair.connect(wallet).approve(migrator.address, await pair.balanceOf(wallet.address));
         await migrator.cook(kashi0.address, kashi1.address, await kashi0.asset(), await kashi1.asset(), permitData);
     });
