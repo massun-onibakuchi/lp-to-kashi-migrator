@@ -60,7 +60,7 @@ export function getBentoBoxApproveDigest(
 export const signMasterContractApproval = async (
     name: string,
     chainId: number,
-    masterContract: string,
+    verifyingContract: string,
     user: string,
     approved: boolean,
     signer: Wallet,
@@ -71,11 +71,11 @@ export const signMasterContractApproval = async (
     const domain = {
         name,
         chainId,
-        masterContract,
+        verifyingContract,
     };
 
     const types = { SetMasterContractApproval: MASTER_CONTRACT_APPROVAL_TYPE };
-
+    const masterContract = verifyingContract;
     const data = {
         warning,
         user,

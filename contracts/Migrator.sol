@@ -75,8 +75,8 @@ contract Migrator {
         address assetA,
         address assetB
     ) internal pure {
-        require((assetA == tokenA && assetB == tokenB) || (assetA == tokenB && assetB == tokenA), "ASSET_ADDRESS");
-        require(tokenA != tokenB, "IDENTICAL_ADDRESSES");
+        require((assetA == tokenA && assetB == tokenB) || (assetA == tokenB && assetB == tokenA), "asset-address");
+        require(tokenA != tokenB, "identical-address");
     }
 
     /// @notice assuming caller approve this contract
