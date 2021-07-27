@@ -99,7 +99,7 @@ contract Migrator {
         // * uint256[] calldata values,
         // * bytes[] calldata datas
         (, , bool approved, , , ) = abi.decode(permitData, (address, address, bool, uint8, bytes32, bytes32));
-        require(approved, "approved-shoule-be-true");
+        require(approved, "approved-should-be-true");
 
         uint256[] memory values = new uint256[](5);
         uint8[] memory actions = new uint8[](5);
