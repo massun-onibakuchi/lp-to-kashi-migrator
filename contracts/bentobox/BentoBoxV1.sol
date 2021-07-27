@@ -26,6 +26,9 @@ pragma experimental ABIEncoderV2;
 // File @boringcrypto/boring-solidity/contracts/interfaces/IERC20.sol@v1.2.0
 // License-Identifier: MIT
 
+// CHANGED
+import "hardhat/console.sol";
+
 interface IERC20 {
     function totalSupply() external view returns (uint256);
 

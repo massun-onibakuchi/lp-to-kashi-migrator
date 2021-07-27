@@ -28,8 +28,6 @@ describe("setMasterContractApproval", async function () {
         [wallet, other] = waffle.provider.getWallets();
         Migrator = await ethers.getContractFactory("MigratorTest");
         BentoBox = await ethers.getContractFactory("BentoBoxV1");
-        console.log("chainId :>> ", chainId);
-        console.log("wallet :>> ", wallet.address);
     });
     beforeEach(async function () {
         migrator = (await Migrator.deploy(
@@ -39,14 +37,17 @@ describe("setMasterContractApproval", async function () {
         bentoBox = await BentoBox.deploy("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2");
     });
 
+    it("DOMAIN_SEPARARTOR", async function () {
+        const nonce = 0;
+        expect(await bentoBox.nonces(wallet.address)).to.eq(nonce);
+        expect(await bentoBox.DOMAIN_SEPARATOR()).to.eq(getDomainSeparator("BentoBox V1", bentoBox.address, chainId));
+    });
+
     it("setMasterContractApproval", async function () {
         const nonce = 0;
         const approved = true;
         const masterContract = bentoBox.address;
-        expect(await bentoBox.nonces(wallet.address)).to.eq(nonce);
-        expect(await bentoBox.DOMAIN_SEPARATOR()).to.eq(getDomainSeparator("BentoBox V1", bentoBox.address, chainId));
         const { v, r, s } = await signMasterContractApproval(
-            // keccak256(toUtf8Bytes("BentoBox V1")),
             "BentoBox V1",
             chainId,
             masterContract,
@@ -63,29 +64,8 @@ describe("setMasterContractApproval", async function () {
             wallet.address,
             nonce,
         );
-        try {
-            await bentoBox.setMasterContractApproval(wallet.address, masterContract, approved, v, r, s);
-        } catch (e) {}
-        //0x33001896c150c015b80ae03ee0d3ece898b9aab8
-
-        expect(recoverAddress(digest, { v, r, s })).to.eq(wallet.address);
+        // expect(recoverAddress(digest, { v, r, s })).to.eq(wallet.address);
+        await bentoBox.setMasterContractApproval(wallet.address, masterContract, approved, v, r, s);
+        expect(await bentoBox.masterContractApproved(masterContract, wallet.address)).to.be.true;
     });
-    // it("setMasterContractApproval", async function () {
-    //     const nonce = 0;
-    //     const approved = true;
-    //     const masterContract = await bentoBox.masterContractOf(kashi0.address);
-    //     expect(await bentoBox.masterContractOf(kashi1.address)).to.eq(masterContract);
-    //     expect(await bentoBox.nonces(wallet.address)).to.eq(nonce);
-    //     const { v, r, s } = await signMasterContractApproval(
-    //         keccak256(toUtf8Bytes("BentoBox V1")),
-    //         // "BentoBox V1",
-    //         1,
-    //         masterContract,
-    //         wallet.address,
-    //         approved,
-    //         wallet,
-    //         nonce,
-    //     );
-    //     expect(await bentoBox.setMasterContractApproval(wallet.address, masterContract, approved, v, r, s));
-    // });
 });
