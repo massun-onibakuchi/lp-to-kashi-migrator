@@ -1,6 +1,6 @@
 import hre, { waffle, ethers } from "hardhat";
 import { expect, use } from "chai";
-import { defaultAbiCoder, keccak256, recoverAddress, toUtf8Bytes } from "ethers/lib/utils";
+import { recoverAddress, defaultAbiCoder } from "ethers/lib/utils";
 import { getBentoBoxApproveDigest, signMasterContractApproval } from "./signature";
 import { Wallet } from "ethers";
 import { IERC20, MigratorTest, IUniswapV2Pair, KashiPairMediumRiskV1 } from "../typechain";
@@ -8,8 +8,6 @@ import { IERC20, MigratorTest, IUniswapV2Pair, KashiPairMediumRiskV1 } from "../
 use(require("chai-bignumber")());
 
 const toWei = ethers.utils.parseEther;
-const overrides = { gasLimit: 9500000 };
-const amount = toWei("100");
 
 // get contract ABI via Etherscan API
 const getVerifiedContractAt = async (address: string) => {
@@ -45,8 +43,7 @@ describe("Migrator", async function () {
     let Migrator;
     let chainId;
     before(async function () {
-        // ({ chainId } = await ethers.provider.getNetwork());
-        // [wallet, other] = await ethers.getSigners();
+        ({ chainId } = await ethers.provider.getNetwork());
         [wallet, other] = waffle.provider.getWallets();
         Migrator = await ethers.getContractFactory("MigratorTest");
     });
@@ -92,61 +89,29 @@ describe("Migrator", async function () {
         const nonce = 0;
         const approved = true;
         const masterContract = await bentoBox.masterContractOf(kashi0.address);
+
+        const getPermitData = (user: string, masterContract: string, approved: boolean, v, r, s) => {
+            return defaultAbiCoder.encode(
+                ["address", "address", "bool", "uint8", "bytes32", "bytes32"],
+                [user, masterContract, approved, v, r, s],
+            );
+        };
+
         expect(await bentoBox.masterContractOf(kashi1.address)).to.eq(masterContract);
         expect(await bentoBox.nonces(wallet.address)).to.eq(nonce);
+
         const { v, r, s } = await signMasterContractApproval(
-            // keccak256(toUtf8Bytes("BentoBox V1")),
             "BentoBox V1",
-            1,
+            chainId,
             masterContract,
             wallet.address,
             approved,
             wallet,
             nonce,
         );
-        const digest = getBentoBoxApproveDigest("BentoBox V1", masterContract, 1, approved, wallet.address, nonce);
-        expect(recoverAddress(digest, { v, r, s })).to.eq(wallet.address);
-    });
-    // it("setMasterContractApproval", async function () {
-    //     const nonce = 0;
-    //     const approved = true;
-    //     const masterContract = await bentoBox.masterContractOf(kashi0.address);
-    //     expect(await bentoBox.masterContractOf(kashi1.address)).to.eq(masterContract);
-    //     expect(await bentoBox.nonces(wallet.address)).to.eq(nonce);
-    //     const { v, r, s } = await signMasterContractApproval(
-    //         keccak256(toUtf8Bytes("BentoBox V1")),
-    //         // "BentoBox V1",
-    //         1,
-    //         masterContract,
-    //         wallet.address,
-    //         approved,
-    //         wallet,
-    //         nonce,
-    //     );
-    //     expect(await bentoBox.setMasterContractApproval(wallet.address, masterContract, approved, v, r, s));
-    // });
 
-    // it("cook", async function () {
-    //     const getPermitData = (user: string, masterContract: string, approved: boolean, v, r, s) => {
-    //         return defaultAbiCoder.encode(
-    //             ["address", "address", "bool", "uint8", "bytes32", "bytes32"],
-    //             [user, masterContract, approved, v, r, s],
-    //         );
-    //     };
-    //     const nonce = 0;
-    //     expect(await bentoBox.nonces(wallet.address)).to.eq(nonce);
-    //     const { v, r, s } = await signMasterContractApproval(
-    //         keccak256(toUtf8Bytes("BentoBox V1")),
-    //         // "BentoBox V1",
-    //         chainId || 1,
-    //         bentoBox.address,
-    //         wallet.address,
-    //         true,
-    //         wallet,
-    //         nonce,
-    //     );
-    //     const permitData = getPermitData(wallet.address, bentoBox.address, true, v, r, s);
-    //     await pair.connect(wallet).approve(migrator.address, await pair.balanceOf(wallet.address));
-    //     await migrator.cook(kashi0.address, kashi1.address, await kashi0.asset(), await kashi1.asset(), permitData);
-    // });
+        const permitData = getPermitData(wallet.address, bentoBox.address, approved, v, r, s);
+        await pair.connect(wallet).approve(migrator.address, await pair.balanceOf(wallet.address));
+        await migrator.cook(kashi0.address, kashi1.address, await kashi0.asset(), await kashi1.asset(), permitData);
+    });
 });
