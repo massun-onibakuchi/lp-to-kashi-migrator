@@ -46,10 +46,11 @@ describe("setMasterContractApproval", async function () {
     it("setMasterContractApproval", async function () {
         const nonce = 0;
         const approved = true;
-        const masterContract = bentoBox.address;
+        const masterContract = "0x2cBA6Ab6574646Badc84F0544d05059e57a5dc42";
         const { v, r, s } = await signMasterContractApproval(
             "BentoBox V1",
             chainId,
+            bentoBox.address,
             masterContract,
             wallet.address,
             approved,
@@ -58,13 +59,14 @@ describe("setMasterContractApproval", async function () {
         );
         const digest = getBentoBoxApproveDigest(
             "BentoBox V1",
+            bentoBox.address,
             masterContract,
             chainId,
             approved,
             wallet.address,
             nonce,
         );
-        // expect(recoverAddress(digest, { v, r, s })).to.eq(wallet.address);
+        expect(recoverAddress(digest, { v, r, s })).to.eq(wallet.address);
         await bentoBox.setMasterContractApproval(wallet.address, masterContract, approved, v, r, s);
         expect(await bentoBox.masterContractApproved(masterContract, wallet.address)).to.be.true;
     });

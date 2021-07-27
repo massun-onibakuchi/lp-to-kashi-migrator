@@ -33,6 +33,7 @@ const WARNING_REVOKE_ACCESS = "Revoke access to BentoBox?";
 
 export function getBentoBoxApproveDigest(
     name: string,
+    bentoBoxContract: string,
     masterContract: string,
     chainId: number,
     approved: boolean,
@@ -42,7 +43,7 @@ export function getBentoBoxApproveDigest(
     const warning = approved
         ? keccak256(toUtf8Bytes(WARNING_FULLL_ACCESS))
         : keccak256(toUtf8Bytes(WARNING_REVOKE_ACCESS));
-    const DOMAIN_SEPARATOR = getDomainSeparator(name, masterContract, chainId);
+    const DOMAIN_SEPARATOR = getDomainSeparator(name, bentoBoxContract, chainId);
     const masterContractApprovalHash = keccak256(
         defaultAbiCoder.encode(
             ["bytes32", "bytes32", "address", "address", "bool", "uint256"],
@@ -61,18 +62,18 @@ export function getBentoBoxApproveDigest(
 export const signMasterContractApproval = async (
     name: string,
     chainId: number,
-    verifyingContract: string,
+    bentoBoxContract: string,
+    masterContract: string,
     user: string,
     approved: boolean,
     signer: Wallet,
     nonce: number,
 ) => {
     const warning = approved ? WARNING_FULLL_ACCESS : WARNING_REVOKE_ACCESS;
-    const masterContract = verifyingContract;
     const domain = {
         name,
         chainId,
-        verifyingContract,
+        verifyingContract: bentoBoxContract,
     };
     const types = { SetMasterContractApproval: MASTER_CONTRACT_APPROVAL_TYPE };
     const data = {
